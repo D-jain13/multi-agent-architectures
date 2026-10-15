@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agentic Architectures Mind Map</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f7f6f3;--fg:#1d2024;--muted:#6b7280;--node:#ffffff;--line:#c9ccd1;--root:#1d2024;--rootfg:#ffffff;color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171a;--fg:#e8eaed;--muted:#9aa0a6;--node:#22262b;--line:#434850;--root:#e8eaed;--rootfg:#15171a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171a;--fg:#e8eaed;--muted:#9aa0a6;--node:#22262b;--line:#434850;--root:#e8eaed;--rootfg:#15171a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+header{padding:20px 20px 8px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:1.15rem;margin:0;font-weight:650}
+.hint{color:var(--muted);font-size:.85rem;margin:2px 0 0}
+.btns{display:flex;gap:8px}
+button{font:inherit;font-size:.85rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--node);color:var(--fg);cursor:pointer}
+button:focus-visible,g[tabindex]:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+#wrap{overflow-x:auto;padding:8px 20px 12px}
+svg{display:block;max-width:none}
+.node rect{fill:var(--node);stroke-width:1.6}
+.node text{fill:var(--fg);font-size:13px;font-family:inherit}
+.node{cursor:pointer}
+.node.root rect{fill:var(--root);stroke:var(--root)}
+.node.root text{fill:var(--rootfg);font-weight:650}
+.node.sel rect{stroke-width:3}
+path.l{fill:none;stroke-width:1.6;opacity:.7}
+#info{margin:0 20px 24px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--node);min-height:64px}
+#info b{display:block;margin-bottom:2px}
+#info span{color:var(--muted);font-size:.92rem}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Agentic Architectures</h1>
+    <p class="hint">Click a group to expand or collapse. Click an architecture for a one-line summary.</p>
+  </div>
+  <div class="btns"><button id="exp">Expand all</button><button id="col">Collapse all</button></div>
+</header>
+<div id="wrap"><svg id="s" role="img" aria-label="Mind map of agentic architectures"></svg></div>
+<div id="info"><b>Select a node</b><span>Details appear here.</span></div>
+<script>
+var COLORS=["#2563eb","#059669","#d97706","#9333ea","#e11d48"];
+var data={name:"Agentic Architectures",open:true,children:[
+{name:"Single agent",children:[
+ {name:"Single-agent",d:"One LLM in a loop with tools. The default choice; move beyond it only when it fails measurably."},
+ {name:"ReAct",d:"Thought, Action, Observation, repeat. The building block inside most other patterns."}]},
+{name:"Workflow patterns",children:[
+ {name:"Pipeline (sequential)",d:"Fixed chain of LLM steps, output feeds the next. Predictable; add validation gates between steps."},
+ {name:"Parallel",d:"Run independent calls together. Sectioning splits work; voting repeats a task and takes the majority."},
+ {name:"Router",d:"A cheap classifier sends the request to the right handler. Like an API gateway. Needs a fallback route."},
+ {name:"Planner-Executor",d:"Strong model plans, cheaper agents or code execute each step, optional replanning on failure."},
+ {name:"Map-Reduce",d:"Split a big input, process chunks in parallel, combine results. Beats context limits."},
+ {name:"Reflection (evaluator-optimizer)",d:"Generate, critique, improve. Works best with objective feedback such as tests. Cap the rounds."}]},
+{name:"Multi-agent topologies",children:[
+ {name:"Hub-and-Spoke",d:"One central agent talks to specialists; specialists do not talk to each other. Same idea as Supervisor-Worker."},
+ {name:"Supervisor-Worker",d:"Supervisor delegates to workers and collects results. Control returns to the boss. Workers can be exposed as tools."},
+ {name:"Hierarchical",d:"Supervisors of supervisors. Only for very large domains; each layer adds cost and latency."},
+ {name:"Multi-agent collaboration",d:"Umbrella term: several role-based agents (coder, reviewer, tester) working toward one goal."},
+ {name:"Handoff",d:"The active agent transfers control and context to another agent. No central boss. Add loop guards."},
+ {name:"Blackboard (shared state)",d:"Agents read and write a shared workspace instead of messaging each other. Postgres or a LangGraph state object."},
+ {name:"Swarm (decentralized)",d:"Peer agents with no controller. Mostly experimental; hard to debug and bound cost."}]},
+{name:"Implementation styles",children:[
+ {name:"Graph-based (DAG / cyclic)",d:"Nodes and edges. DAGs for pipelines and branches; cycles for loops. LangGraph is built on this."},
+ {name:"State machine",d:"Fixed states and allowed transitions enforced by code; the LLM works inside a state. Best for regulated flows."},
+ {name:"Event-driven",d:"Agents consume events (Kafka, queues). Async and scalable. Needs idempotency, DLQ and correlation IDs."},
+ {name:"Human-in-the-loop",d:"Pause for approval at risky steps. Requires checkpointed, resumable state."}]},
+{name:"Hybrid",children:[
+ {name:"Hybrid (combine patterns)",d:"Deterministic skeleton with agentic pockets: router, pipeline, ReAct agent, evaluator, HITL, all on a checkpointed graph."}]}
+]};
+data.children.forEach(function(g,i){g.color=COLORS[i];g.group=true;g.children.forEach(function(c){c.color=COLORS[i];});});
+var ROW=42,GAP=56,PAD=16,sel=null,svg=document.getElementById("s");
+function w(n){return Math.max(96,Math.round(n.name.length*7.4+(n.children?44:28)));}
+function layout(){
+  var cy=PAD,cols=[];
+  (function place(n,d){
+    n.depth=d;n.w=w(n);cols[d]=Math.max(cols[d]||0,n.w);
+    if(n.children&&n.open){n.children.forEach(function(c){place(c,d+1);});n.y=(n.children[0].y+n.children[n.children.length-1].y)/2;}
+    else{n.y=cy;cy+=ROW;}
+  })(data,0);
+  var xs=[PAD];for(var i=1;i<cols.length;i++)xs[i]=xs[i-1]+cols[i-1]+GAP;
+  return {xs:xs,h:cy+PAD-ROW+34,wd:xs[xs.length-1]+cols[cols.length-1]+PAD};
+}
+function el(t,a){var e=document.createElementNS("http://www.w3.org/2000/svg",t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+function draw(){
+  var L=layout();svg.innerHTML="";svg.setAttribute("width",L.wd);svg.setAttribute("height",L.h);svg.setAttribute("viewBox","0 0 "+L.wd+" "+L.h);
+  var links=el("g",{}),nodes=el("g",{});svg.appendChild(links);svg.appendChild(nodes);
+  (function walk(n){
+    var x=L.xs[n.depth];
+    if(n.children&&n.open)n.children.forEach(function(c){
+      var x2=L.xs[c.depth],mx=(x+n.w+x2)/2;
+      links.appendChild(el("path",{"class":"l",stroke:c.color,d:"M"+(x+n.w)+" "+n.y+" C"+mx+" "+n.y+" "+mx+" "+c.y+" "+x2+" "+c.y}));
+      walk(c);});
+    var g=el("g",{"class":"node"+(n===data?" root":"")+(n===sel?" sel":""),tabindex:0,role:"button","aria-label":n.name});
+    var r=el("rect",{x:x,y:n.y-16,width:n.w,height:32,rx:9,stroke:n.color||"var(--root)"});
+    var t=el("text",{x:x+14,y:n.y+4.5});t.textContent=n.name;
+    g.appendChild(r);g.appendChild(t);
+    if(n.children&&n!==data){var m=el("text",{x:x+n.w-16,y:n.y+4.5,"text-anchor":"middle"});m.textContent=n.open?"\u2212":"+";m.style.fill=n.color;m.style.fontWeight="700";g.appendChild(m);}
+    function act(){
+      if(n.children&&n!==data){n.open=!n.open;}
+      sel=n;info(n);draw();
+    }
+    g.addEventListener("click",act);
+    g.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}});
+    nodes.appendChild(g);
+  })(data);
+}
+function info(n){
+  var i=document.getElementById("info");
+  i.innerHTML="";var b=document.createElement("b"),s=document.createElement("span");
+  b.textContent=n.name;
+  s.textContent=n.d||(n.children?n.children.map(function(c){return c.name;}).join(", "):"");
+  i.appendChild(b);i.appendChild(s);
+}
+function setAll(v){data.children.forEach(function(g){g.open=v;});draw();}
+document.getElementById("exp").onclick=function(){setAll(true);};
+document.getElementById("col").onclick=function(){setAll(false);};
+draw();
+</script>
+</body>
+</html>
